@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 
 /// <summary>
@@ -18,19 +17,24 @@ public class RegistrationVrController : MonoBehaviour
     [SerializeField] private bool calibrateObject;
     [HideInInspector] public GameObject controllerInUse;
     
-    private Calibrator _calibrator;
-    private Vector3 _tipPosition;
+    protected Calibrator _calibrator;
+    protected Vector3 _tipPosition;
     private GameObject _demoObject;
     private bool _isRecordingTipPosition;
-    private List<Vector3> _tipPositionsOverTime = new List<Vector3>();
+    private readonly List<Vector3> _tipPositionsOverTime = new List<Vector3>();
     public readonly Vector3 PredefinedTipPosition = new Vector3(0.01211928f,-0.08250856f,-0.08393941f);
+
+    protected Handedness ControllerSelection => controllerSelection;
+    protected bool CalibrateObject => calibrateObject;
+    protected virtual float TipForwardOffset => 0.06f;
+
     public enum Handedness
     {
         RightHanded,
         LeftHanded
     }
 
-    private void Awake()
+    protected virtual void Awake()
     {
         _calibrator = gameObject.AddComponent<Calibrator>();
         SetupController();
@@ -41,7 +45,7 @@ public class RegistrationVrController : MonoBehaviour
     }
     
 
-    private void Start()
+    protected virtual void Start()
     {
         if (calibrateObject)
             registration.SetState(Registration.State.Calibration);
@@ -50,7 +54,7 @@ public class RegistrationVrController : MonoBehaviour
         _calibrator.SetRelativePostition(PredefinedTipPosition);
     }
 
-    private void OnStateChanged()
+    protected virtual void OnStateChanged()
     {
         switch (registration.currentState)
         {
@@ -66,18 +70,23 @@ public class RegistrationVrController : MonoBehaviour
         }
     }
 
-    private void OnEnable()
+    protected virtual void OnEnable()
     {
         SetupController();
     }
 
-    private void SetupController()
+    protected virtual void OnDisable()
     {
-        controllerInUse = SearchForController(controllerSelection);
-        _calibrator.toCalibrate = controllerInUse;
     }
 
-    private void Update()
+    protected virtual void SetupController()
+    {
+        controllerInUse = SearchForController(controllerSelection);
+        if (_calibrator != null)
+            _calibrator.toCalibrate = controllerInUse;
+    }
+
+    protected virtual void Update()
     {
         if (registration.currentState == Registration.State.Inactive) return;
         switch (registration.currentState)
@@ -94,7 +103,7 @@ public class RegistrationVrController : MonoBehaviour
         }
     }
 
-    private void CalibrationActions()
+    protected virtual void CalibrationActions()
     {
         UpdateTipPosition();
         UpdateDemoObject();
@@ -110,7 +119,7 @@ public class RegistrationVrController : MonoBehaviour
         
     }
 
-    private void MarkerStateActions()
+    protected virtual void MarkerStateActions()
     {
         UpdateTipPosition();
         UpdateDemoObject();
@@ -121,7 +130,7 @@ public class RegistrationVrController : MonoBehaviour
         RightHandMarkerInteractions();
     }
     
-    private void ConfirmationStateActions()
+    protected virtual void ConfirmationStateActions()
     {
         if (CommitButtonPressed())
         {
@@ -135,17 +144,17 @@ public class RegistrationVrController : MonoBehaviour
         }
     }
 
-    private void UpdateTipPosition()
+    protected virtual void UpdateTipPosition()
     {
         if (calibrateObject)
             _tipPosition = _calibrator.GetCalibratedCurrentPosition();
         else if (controllerInUse != null)
-            _tipPosition = controllerInUse.transform.position + controllerInUse.transform.forward * 0.06f;
+            _tipPosition = controllerInUse.transform.position + controllerInUse.transform.forward * TipForwardOffset;
         else
             Debug.LogWarning("No Controller in Use!");
     }
 
-    private void UpdateDemoObject()
+    protected virtual void UpdateDemoObject()
     {
         if (_demoObject == null) return;
 
@@ -153,19 +162,20 @@ public class RegistrationVrController : MonoBehaviour
         Helper.SetColor(_demoObject, Helper.GetColorForIndex(registration.markers.Count));
     }
 
-    private void RightHandMarkerInteractions()
+    protected virtual void RightHandMarkerInteractions()
     {
         if (_isRecordingTipPosition && AnyTriggerUp()) EndRecordingTipPosition();
         if (!_isRecordingTipPosition && AnyTriggerDown()) StartRecordingTipPosition();
         if (CancelButtonPressed()) registration.ResetEverything();
     }
 
-    private void StartRecordingTipPosition()
+    protected virtual void StartRecordingTipPosition()
     {
         _isRecordingTipPosition = true;
         _tipPositionsOverTime.Clear();
     }
-    private void EndRecordingTipPosition()
+
+    protected virtual void EndRecordingTipPosition()
     {
         if(_tipPositionsOverTime == null || _tipPositionsOverTime.Count < 1)return;
         _isRecordingTipPosition = false;
@@ -175,7 +185,8 @@ public class RegistrationVrController : MonoBehaviour
         _tipPositionsOverTime.Clear();
         registration.AddMarker(midPoint);
     }
-    private GameObject SearchForController(Handedness handedness)
+
+    protected virtual GameObject SearchForController(Handedness handedness)
     {
         string controllerName =
             handedness == Handedness.RightHanded ? "RightControllerAnchor" : "LeftControllerAnchor";
@@ -183,7 +194,7 @@ public class RegistrationVrController : MonoBehaviour
         return controllerToUse;
     }
 
-    private void LeftHandMarkerInteractions()
+    protected virtual void LeftHandMarkerInteractions()
     {
         if (OVRInput.GetDown(OVRInput.Button.One, OVRInput.Controller.LTouch))
         {
@@ -191,23 +202,23 @@ public class RegistrationVrController : MonoBehaviour
         }
     }
 
-    private static bool CommitButtonPressed()
+    protected virtual bool CommitButtonPressed()
     {
         return OVRInput.GetDown(OVRInput.Button.One, OVRInput.Controller.RTouch);
     }
 
-    private static bool CancelButtonPressed()
+    protected virtual bool CancelButtonPressed()
     {
         return OVRInput.GetDown(OVRInput.Button.Two, OVRInput.Controller.RTouch);
     }
 
-    private static bool AnyTriggerDown()
+    protected virtual bool AnyTriggerDown()
     {
         return OVRInput.GetDown(OVRInput.Button.PrimaryHandTrigger, OVRInput.Controller.RTouch) ||
                OVRInput.GetDown(OVRInput.Button.PrimaryIndexTrigger, OVRInput.Controller.RTouch);
     }
     
-    private static bool AnyTriggerUp()
+    protected virtual bool AnyTriggerUp()
     {
         return OVRInput.GetUp(OVRInput.Button.PrimaryHandTrigger, OVRInput.Controller.RTouch) ||
                OVRInput.GetUp(OVRInput.Button.PrimaryIndexTrigger, OVRInput.Controller.RTouch);
