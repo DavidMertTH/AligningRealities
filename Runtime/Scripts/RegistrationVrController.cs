@@ -80,6 +80,44 @@ public class RegistrationVrController : MonoBehaviour
         if (_isRecordingTipPosition) EndRecordingTipPosition();
     }
 
+    public void CommitPressed()
+    {
+        switch (registration.currentState)
+        {
+            case Registration.State.Calibration:
+                registration.SetState(Registration.State.MarkerSetup);
+                break;
+            case Registration.State.Confirmation:
+                registration.SaveRegistration();
+                registration.SetState(Registration.State.Inactive);
+                break;
+        }
+    }
+
+    public void CancelPressed()
+    {
+        CancelTriggerRecording();
+
+        switch (registration.currentState)
+        {
+            case Registration.State.Calibration:
+                _calibrator.SetRelativePostition(PredefinedTipPosition);
+                break;
+            case Registration.State.MarkerSetup:
+                registration.ResetEverything();
+                break;
+            case Registration.State.Confirmation:
+                registration.SetState(Registration.State.MarkerSetup);
+                break;
+        }
+    }
+
+    public void RestorePressed()
+    {
+        if (registration.currentState == Registration.State.MarkerSetup)
+            registration.RestoreLastPlacedAnchor();
+    }
+
     private void OnStateChanged()
     {
         if ((_isRecordingCalibration && registration.currentState != Registration.State.Calibration) ||
@@ -138,14 +176,10 @@ public class RegistrationVrController : MonoBehaviour
         UpdateTipPosition();
         UpdateDemoObject();
 
-        if (CommitButtonPressed()) registration.SetState(Registration.State.MarkerSetup);
+        if (CommitButtonPressed()) CommitPressed();
         if (AnyTriggerDown()) TriggerPressed();
         if (AnyTriggerUp()) TriggerReleased();
-        if (CancelButtonPressed())
-        {
-            CancelTriggerRecording();
-            _calibrator.SetRelativePostition(PredefinedTipPosition);
-        }
+        if (CancelButtonPressed()) CancelPressed();
         
     }
 
@@ -162,16 +196,8 @@ public class RegistrationVrController : MonoBehaviour
     
     private void ConfirmationStateActions()
     {
-        if (CommitButtonPressed())
-        {
-            registration.SaveRegistration();
-            registration.SetState(Registration.State.Inactive);
-        }
-
-        if (CancelButtonPressed())
-        {
-            registration.SetState(Registration.State.MarkerSetup);
-        }
+        if (CommitButtonPressed()) CommitPressed();
+        if (CancelButtonPressed()) CancelPressed();
     }
 
     private void UpdateTipPosition()
@@ -196,11 +222,7 @@ public class RegistrationVrController : MonoBehaviour
     {
         if (AnyTriggerDown()) TriggerPressed();
         if (AnyTriggerUp()) TriggerReleased();
-        if (CancelButtonPressed())
-        {
-            CancelTriggerRecording();
-            registration.ResetEverything();
-        }
+        if (CancelButtonPressed()) CancelPressed();
     }
 
     private void CancelTriggerRecording()
@@ -243,9 +265,7 @@ public class RegistrationVrController : MonoBehaviour
     private void LeftHandMarkerInteractions()
     {
         if (OVRInput.GetDown(OVRInput.Button.One, OVRInput.Controller.LTouch))
-        {
-            registration.RestoreLastPlacedAnchor();
-        }
+            RestorePressed();
     }
 
     private static bool CommitButtonPressed()
