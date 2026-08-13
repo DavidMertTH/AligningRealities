@@ -21,6 +21,7 @@ public class RegistrationVrController : MonoBehaviour
     private Calibrator _calibrator;
     private Vector3 _tipPosition;
     private GameObject _demoObject;
+    private bool _isRecordingCalibration;
     private bool _isRecordingTipPosition;
     private List<Vector3> _tipPositionsOverTime = new List<Vector3>();
     public readonly Vector3 PredefinedTipPosition = new Vector3(0.01211928f,-0.08250856f,-0.08393941f);
@@ -50,8 +51,41 @@ public class RegistrationVrController : MonoBehaviour
         _calibrator.SetRelativePostition(PredefinedTipPosition);
     }
 
+    public void TriggerPressed()
+    {
+        if (_isRecordingCalibration || _isRecordingTipPosition) return;
+
+        switch (registration.currentState)
+        {
+            case Registration.State.Calibration:
+                _isRecordingCalibration = true;
+                _demoObject.SetActive(true);
+                _calibrator.StartRecording();
+                break;
+            case Registration.State.MarkerSetup:
+                UpdateTipPosition();
+                StartRecordingTipPosition();
+                break;
+        }
+    }
+
+    public void TriggerReleased()
+    {
+        if (_isRecordingCalibration)
+        {
+            _isRecordingCalibration = false;
+            _calibrator.StopRecording();
+        }
+
+        if (_isRecordingTipPosition) EndRecordingTipPosition();
+    }
+
     private void OnStateChanged()
     {
+        if ((_isRecordingCalibration && registration.currentState != Registration.State.Calibration) ||
+            (_isRecordingTipPosition && registration.currentState != Registration.State.MarkerSetup))
+            CancelTriggerRecording();
+
         switch (registration.currentState)
         {
             case Registration.State.Calibration:
@@ -69,6 +103,11 @@ public class RegistrationVrController : MonoBehaviour
     private void OnEnable()
     {
         SetupController();
+    }
+
+    private void OnDisable()
+    {
+        CancelTriggerRecording();
     }
 
     private void SetupController()
@@ -100,13 +139,13 @@ public class RegistrationVrController : MonoBehaviour
         UpdateDemoObject();
 
         if (CommitButtonPressed()) registration.SetState(Registration.State.MarkerSetup);
-        if (AnyTriggerDown())
+        if (AnyTriggerDown()) TriggerPressed();
+        if (AnyTriggerUp()) TriggerReleased();
+        if (CancelButtonPressed())
         {
-            _demoObject.SetActive(true);
-            _calibrator.StartRecording();
+            CancelTriggerRecording();
+            _calibrator.SetRelativePostition(PredefinedTipPosition);
         }
-        if (AnyTriggerUp()) _calibrator.StopRecording();
-        if (CancelButtonPressed()) _calibrator.SetRelativePostition(PredefinedTipPosition);
         
     }
 
@@ -155,9 +194,22 @@ public class RegistrationVrController : MonoBehaviour
 
     private void RightHandMarkerInteractions()
     {
-        if (_isRecordingTipPosition && AnyTriggerUp()) EndRecordingTipPosition();
-        if (!_isRecordingTipPosition && AnyTriggerDown()) StartRecordingTipPosition();
-        if (CancelButtonPressed()) registration.ResetEverything();
+        if (AnyTriggerDown()) TriggerPressed();
+        if (AnyTriggerUp()) TriggerReleased();
+        if (CancelButtonPressed())
+        {
+            CancelTriggerRecording();
+            registration.ResetEverything();
+        }
+    }
+
+    private void CancelTriggerRecording()
+    {
+        if (_isRecordingCalibration) _calibrator.CancelRecording();
+
+        _isRecordingCalibration = false;
+        _isRecordingTipPosition = false;
+        _tipPositionsOverTime.Clear();
     }
 
     private void StartRecordingTipPosition()
@@ -167,7 +219,12 @@ public class RegistrationVrController : MonoBehaviour
     }
     private void EndRecordingTipPosition()
     {
-        if(_tipPositionsOverTime == null || _tipPositionsOverTime.Count < 1)return;
+        if (_tipPositionsOverTime.Count < 1)
+        {
+            UpdateTipPosition();
+            _tipPositionsOverTime.Add(_tipPosition);
+        }
+
         _isRecordingTipPosition = false;
         Vector3 midPoint = Vector3.zero;
         _tipPositionsOverTime.ForEach(pos => midPoint += pos);

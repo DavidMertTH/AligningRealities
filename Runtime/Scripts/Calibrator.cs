@@ -16,6 +16,7 @@ public class Calibrator : MonoBehaviour
 {
     [HideInInspector] public GameObject toCalibrate;
     private Vector3 _calibratedPosition;
+    private Vector3 _relativePosition;
     private List<Vector3> _sampledPositions = new List<Vector3>();
     private List<Vector3> _sampledDirections = new List<Vector3>();
     private bool _isRecording = false;
@@ -31,6 +32,7 @@ public class Calibrator : MonoBehaviour
 
     public void SetRelativePostition(Vector3 relativePosition)
     {
+        _relativePosition = relativePosition;
         centerMarker.transform.localPosition = relativePosition;
         centerMarker.transform.parent = toCalibrate.transform;
         centerMarker.transform.localPosition = relativePosition;
@@ -77,13 +79,26 @@ public class Calibrator : MonoBehaviour
         if (_sampledPositions.Count > 3)
         {
             _calibratedPosition = SphereNumericalSolver(_sampledPositions);
+            centerMarker.transform.position = _calibratedPosition;
         }
 
-        centerMarker.transform.position = _calibratedPosition;
         centerMarker.transform.parent = toCalibrate.transform;
+        if (_sampledPositions.Count > 3)
+            _relativePosition = centerMarker.transform.localPosition;
+        else
+            centerMarker.transform.localPosition = _relativePosition;
         centerMarker.GetComponent<MeshRenderer>().enabled = false;
         _sampledPositions.Clear();
         return centerMarker;
+    }
+
+    public void CancelRecording()
+    {
+        _isRecording = false;
+        centerMarker.transform.parent = toCalibrate.transform;
+        centerMarker.transform.localPosition = _relativePosition;
+        _sampledPositions.Clear();
+        _sampledDirections.Clear();
     }
 
     private void SampleControllerData()
