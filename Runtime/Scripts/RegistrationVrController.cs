@@ -73,7 +73,7 @@ public class RegistrationVrController : MonoBehaviour
 
     private void SetupController()
     {
-        controllerInUse = SearchForController(controllerSelection);
+        controllerInUse = customObject != null ? customObject : SearchForController(controllerSelection);
         _calibrator.toCalibrate = controllerInUse;
     }
 
