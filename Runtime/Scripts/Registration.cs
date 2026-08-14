@@ -28,6 +28,7 @@ public class Registration : MonoBehaviour
     private Vector3 _tipPosition;
     private Calibrator _calibrator;
     private Kabsch.Kabsch _kabsch = new();
+    private Quaternion _initialTargetRotation;
 
     public enum State
     {
@@ -45,6 +46,7 @@ public class Registration : MonoBehaviour
 
     private void Awake()
     {
+        _initialTargetRotation = regiTarget.transform.rotation;
         RegistrationPlaneProjection = new RegistrationPlaneProjection();
         markers = new List<GameObject>();
         regiTarget.SetVisible(false);
@@ -181,14 +183,15 @@ public class Registration : MonoBehaviour
         _kabsch.TargetObject = toTransform.gameObject;
 
         if (onlyCorrectYAxis)
-            AlignMeshYAxis(_kabsch.InPoints, _kabsch.ReferencePoints, toTransform);
+            AlignMeshYAxis(_kabsch.InPoints, _kabsch.ReferencePoints, toTransform, _initialTargetRotation);
         else
             _kabsch.SolveKabsch();
 
         toTransform.SetVisible(true);
     }
 
-    private void AlignMeshYAxis(Vector3[] sourcePositions, Vector3[] targetPositions, RegiTarget toTransform)
+    private void AlignMeshYAxis(Vector3[] sourcePositions, Vector3[] targetPositions, RegiTarget toTransform,
+        Quaternion initialRotation)
     {
         Vector3 sourceCenter = Vector3.zero;
         Vector3 targetCenter = Vector3.zero;
@@ -207,14 +210,14 @@ public class Registration : MonoBehaviour
 
         for (int i = 0; i < sourcePositions.Length; i++)
         {
-            Vector3 source = sourcePositions[i] - sourceCenter;
+            Vector3 source = initialRotation * (sourcePositions[i] - sourceCenter);
             Vector3 target = targetPositions[i] - targetCenter;
             sin += source.z * target.x - source.x * target.z;
             cos += source.x * target.x + source.z * target.z;
         }
 
         float angle = Mathf.Atan2(sin, cos) * Mathf.Rad2Deg;
-        Quaternion rotation = Quaternion.AngleAxis(angle, Vector3.up);
+        Quaternion rotation = Quaternion.AngleAxis(angle, Vector3.up) * initialRotation;
         Vector3 position = targetCenter - rotation * sourceCenter;
         toTransform.transform.SetPositionAndRotation(position, rotation);
     }
