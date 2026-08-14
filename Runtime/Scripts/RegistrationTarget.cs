@@ -18,12 +18,12 @@ public class RegiTarget : MonoBehaviour
 
     private void Start()
     {
-        transform.position = Vector3.zero;
-        transform.rotation = Quaternion.identity;
+        Quaternion inverseRotation = Quaternion.Inverse(transform.rotation);
         relativeMarkerPositions = new Vector3[markers.Length];
         for (int i = 0; i < markers.Length; i++)
         {
-            relativeMarkerPositions[i] = markers[i].transform.position;
+            relativeMarkerPositions[i] =
+                inverseRotation * (markers[i].transform.position - transform.position);
         }
 
         ActivateMarkers();

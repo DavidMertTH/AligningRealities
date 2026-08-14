@@ -28,6 +28,8 @@ public class Registration : MonoBehaviour
     private Vector3 _tipPosition;
     private Calibrator _calibrator;
     private Kabsch.Kabsch _kabsch = new();
+    private Vector3 _initialTargetLocalPosition;
+    private Quaternion _initialTargetLocalRotation;
     private Quaternion _initialTargetRotation;
 
     public enum State
@@ -46,13 +48,25 @@ public class Registration : MonoBehaviour
 
     private void Awake()
     {
-        _initialTargetRotation = regiTarget.transform.rotation;
         RegistrationPlaneProjection = new RegistrationPlaneProjection();
         markers = new List<GameObject>();
         regiTarget.SetVisible(false);
 
         _anchorLoaderManager = gameObject.AddComponent<AnchorLoaderManager>();
         _anchorLoaderManager.numUuidsPlayerPref = numUuidsKey;
+    }
+
+    private void OnEnable()
+    {
+        _initialTargetLocalPosition = regiTarget.transform.localPosition;
+        _initialTargetLocalRotation = regiTarget.transform.localRotation;
+        _initialTargetRotation = regiTarget.transform.rotation;
+    }
+
+    private void OnDisable()
+    {
+        if (regiTarget != null)
+            regiTarget.transform.SetLocalPositionAndRotation(_initialTargetLocalPosition, _initialTargetLocalRotation);
     }
 
     /// <summary>
