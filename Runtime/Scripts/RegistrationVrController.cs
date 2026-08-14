@@ -24,6 +24,16 @@ public class RegistrationVrController : MonoBehaviour
     private bool _isRecordingCalibration;
     private bool _isRecordingTipPosition;
     private List<Vector3> _tipPositionsOverTime = new List<Vector3>();
+    private static readonly string[] RightControllerNames =
+    {
+        "RightControllerInHandAnchor",
+        "RightControllerAnchor"
+    };
+    private static readonly string[] LeftControllerNames =
+    {
+        "LeftControllerInHandAnchor",
+        "LeftControllerAnchor"
+    };
     public readonly Vector3 PredefinedTipPosition = new Vector3(0.01211928f,-0.08250856f,-0.08393941f);
     public enum Handedness
     {
@@ -256,10 +266,16 @@ public class RegistrationVrController : MonoBehaviour
     }
     private GameObject SearchForController(Handedness handedness)
     {
-        string controllerName =
-            handedness == Handedness.RightHanded ? "RightControllerAnchor" : "LeftControllerAnchor";
-        GameObject controllerToUse = GameObject.Find(controllerName);
-        return controllerToUse;
+        string[] controllerNames =
+            handedness == Handedness.RightHanded ? RightControllerNames : LeftControllerNames;
+
+        foreach (string controllerName in controllerNames)
+        {
+            GameObject controller = GameObject.Find(controllerName);
+            if (controller != null) return controller;
+        }
+
+        return null;
     }
 
     private void LeftHandMarkerInteractions()
