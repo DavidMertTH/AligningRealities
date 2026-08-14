@@ -19,6 +19,7 @@ public class Registration : MonoBehaviour
     public event Action StateChanged;
     public string numUuidsKey = "demoTargetUuidKey";
     public bool onlyCorrectYAxis;
+    public bool disablePassthroughOnConfirmation;
 
     [HideInInspector] public State currentState;
     [HideInInspector] public List<GameObject> markers;
@@ -122,6 +123,9 @@ public class Registration : MonoBehaviour
     /// </summary>
     public async void SaveRegistration()
     {
+        if (disablePassthroughOnConfirmation && OVRManager.instance != null)
+            OVRManager.instance.isInsightPassthroughEnabled = false;
+
         Debug.Log("Save ANCHOR");
         await _anchorLoaderManager.DeleteAllAnchors();
         regiTarget.gameObject.AddComponent<OVRSpatialAnchor>();
